@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 百家樂算牌分析工具 v3.1 - 跑牌值預測版</title>
+    <style>
+        :root {
+            --color-primary: #2180a6;
+            --color-primary-hover: #1a6684;
+            --color-success: #22b85e;
+            --color-error: #c01530;
+            --color-warning: #ff6b35;
+            --color-bg: #fcfcf9;
+            --color-surface: #ffffff;
+            --color-text: #134252;
+            --color-border: #d4d4d0;
+            --color-card-bg: #f5f5f5;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --radius-base: 8px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            padding: var(--space-20);
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            color: var(--color-primary);
+            margin-bottom: var(--space-24);
+            font-size: 28px;
+        }
+        .game-section {
+            background-color: var(--color-surface);
+            border-radius: var(--radius-base);
+            padding: var(--space-24);
+            margin-bottom: var(--space-24);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: var(--space-16);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .card-input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: var(--space-16);
+            margin-bottom: var(--space-20);
+        }
+        .card-input { display: flex; flex-direction: column; }
+        label {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .card-select {
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            background-color: white;
+            color: var(--color-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+        .card-select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(33, 128, 141, 0.2);
+        }
+        .button-group { display: flex; gap: var(--space-16); margin-top: var(--space-20); }
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-calculate { background-color: var(--color-primary); color: white; }
+        .btn-calculate:hover { background-color: var(--color-primary-hover); }
+        .btn-reset { background-color: #f0f0f0; color: var(--color-text); border: 1px solid var(--color-border); }
+        .btn-reset:hover { background-color: #e0e0e0; }
+        .result-section {
+            background-color: var(--color-card-bg);
+            border-radius: var(--radius-base);
+            padding: var(--space-24);
+            border-left: 4px solid var(--color-primary);
+            margin-top: var(--space-24);
+        }
+        .result-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-20);
+            margin-bottom: var(--space-20);
+            padding-bottom: var(--space-20);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .result-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .result-item { display: flex; flex-direction: column; }
+        .result-label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 6px; font-weight: 500; }
+        .result-value { font-size: 24px; font-weight: 600; color: var(--color-text); }
+        .result-value.positive { color: var(--color-success); }
+        .result-value.negative { color: var(--color-error); }
+        .recommendation {
+            background-color: white;
+            border-radius: var(--radius-base);
+            padding: var(--space-20);
+            margin-top: var(--space-20);
+            text-align: center;
+            border: 2px solid var(--color-border);
+        }
+        .recommendation.player { border-color: var(--color-success); background-color: rgba(34, 184, 94, 0.05); }
+        .recommendation.banker { border-color: var(--color-error); background-color: rgba(192, 21, 47, 0.05); }
+        .recommendation-title { font-size: 12px; color: #666; margin-bottom: 8px; text-transform: uppercase; font-weight: 500; }
+        .recommendation-text { font-size: 20px; font-weight: 700; }
+        .recommendation.player .recommendation-text { color: var(--color-success); }
+        .recommendation.banker .recommendation-text { color: var(--color-error); }
+        .hidden { display: none; }
+        .btn-result {
+            padding: 12px 20px;
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: white;
+            color: var(--color-text);
+            transition: all 0.2s;
+        }
+        .btn-result:hover { border-color: var(--color-primary); color: var(--color-primary); }
+        .btn-result-active { border-color: var(--color-primary); background-color: var(--color-primary); color: white; }
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            margin-bottom: 8px;
+            background-color: white;
+        }
+        .history-item-info { flex: 1; }
+        .history-item-game { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .history-item-recommendation { font-size: 13px; font-weight: 500; color: var(--color-text); margin-bottom: 4px; }
+        .history-item-result { font-size: 12px; color: #666; }
+        .history-item-status { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-badge.correct { background-color: rgba(34, 184, 94, 0.15); color: var(--color-success); }
+        .status-badge.fail { background-color: rgba(192, 21, 47, 0.15); color: var(--color-error); }
+        .pattern-history {
+            background-color: #fff3cd;
+            border: 2px solid var(--color-warning);
+            border-radius: var(--radius-base);
+            padding: var(--space-20);
+            margin: var(--space-20) 0;
+        }
+        .pattern-key {
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--color-primary);
+            margin-bottom: var(--space-12);
+            padding: var(--space-8);
+            background: rgba(33, 128, 166, 0.1);
+            border-radius: var(--radius-base);
+        }
+        .pattern-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-16); }
+        .pattern-stat { text-align: center; }
+        .pattern-stat-number { font-size: 20px; font-weight: 700; color: var(--color-primary); }
+        .database-section {
+            background-color: var(--color-card-bg);
+            border-radius: var(--radius-base);
+            padding: var(--space-20);
+            margin-bottom: var(--space-24);
+        }
+        .database-actions { display: flex; gap: var(--space-16); margin-bottom: var(--space-20); flex-wrap: wrap; }
+        .btn-database { padding: 10px 16px; font-size: 13px; }
+        .roadmap-prediction {
+            background-color: white;
+            border-radius: var(--radius-base);
+            padding: var(--space-20);
+            margin-top: var(--space-20);
+            text-align: center;
+            border: 2px solid #ff6b35;
+            background-color: rgba(255, 107, 53, 0.05);
+        }
+        .roadmap-title { font-size: 12px; color: #ff6b35; margin-bottom: 8px; text-transform: uppercase; font-weight: 600; }
+        .prediction-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); margin-bottom: var(--space-16); }
+        .prediction-item { text-align: center; }
+        .prediction-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+        .prediction-value { font-size: 20px; font-weight: 600; }
+        @media (max-width: 600px) {
+            h1 { font-size: 22px; }
+            .game-section { padding: var(--space-16); }
+            .card-input-group { grid-template-columns: repeat(3, 1fr); }
+            .result-row { grid-template-columns: 1fr; }
+            .pattern-stats { grid-template-columns: 1fr; }
+            .database-actions { flex-direction: column; }
+            .prediction-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎰 百家樂算牌分析工具 v3.1</h1>
+        
+        <div class="database-section">
+            <div class="section-title">📊 數據中心</div>
+            <div class="database-actions">
+                <button class="btn-reset btn-database" onclick="exportToExcel()">📊 匯出Excel</button>
+                <button class="btn-reset btn-database" onclick="showAnalytics()">📈 分析報表</button>
+                <button class="btn-reset btn-database" onclick="importDataBatch()">📥 批量導入</button>
+                <button class="btn-calculate btn-database" onclick="showTopPatterns()">🔥 Top牌局</button>
+            </div>
+            <div id="databaseInfo" style="font-size: 14px; color: #666;">
+                資料庫: <span id="totalPatterns">0</span> 牌型 | <span id="totalRecords">0</span> 筆 | 勝率: <span id="totalWinRate" style="color: var(--color-success); font-weight: 600;">-</span>
+            </div>
+        </div>
+
+        <div class="game-section">
+            <div class="section-title">閒家牌</div>
+            <div class="card-input-group">
+                <div class="card-input">
+                    <label>第1張</label>
+                    <select id="player1" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+                <div class="card-input">
+                    <label>第2張</label>
+                    <select id="player2" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+                <div class="card-input">
+                    <label>第3張</label>
+                    <select id="player3" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-section">
+            <div class="section-title">莊家牌</div>
+            <div class="card-input-group">
+                <div class="card-input">
+                    <label>第1張</label>
+                    <select id="banker1" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+                <div class="card-input">
+                    <label>第2張</label>
+                    <select id="banker2" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+                <div class="card-input">
+                    <label>第3張</label>
+                    <select id="banker3" class="card-select">
+                        <option value="">選擇</option>
+                        <option value="1">A</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="0">10</option>
+                        <option value="0">J</option>
+                        <option value="0">Q</option>
+                        <option value="0">K</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-calculate" onclick="calculateBaccarat()">計算結果</button>
+            <button class="btn-reset" onclick="resetForm()">清除重設</button>
+        </div>
+
+        <div id="results" class="hidden">
+            <div id="patternHistorySection" class="pattern-history hidden"></div>
+            
+            <div class="result-section">
+                <div class="result-row">
+                    <div class="result-item">
+                        <div class="result-label">閒家點數</div>
+                        <div class="result-value" id="playerPoints">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">莊家點數</div>
+                        <div class="result-value" id="bankerPoints">-</div>
+                    </div>
+                </div>
+                <div class="result-row">
+                    <div class="result-item">
+                        <div class="result-label">公牌數量</div>
+                        <div class="result-value" id="publicCards">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">公牌類型</div>
+                        <div class="result-value" id="publicType">-</div>
+                    </div>
+                </div>
+                <div class="result-row">
+                    <div class="result-item">
+                        <div class="result-label">基礎點差</div>
+                        <div class="result-value" id="baseDiff">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">最終結果</div>
+                        <div class="result-value" id="finalResult">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="recommendation" class="recommendation">
+                <div class="recommendation-title">本局投注建議</div>
+                <div class="recommendation-text" id="recommendationText">-</div>
+            </div>
+
+            <div class="roadmap-prediction">
+                <div class="roadmap-title">🔮 跑牌值預測（下一局）</div>
+                <div class="prediction-grid">
+                    <div class="prediction-item">
+                        <div class="prediction-label">閒家尾數</div>
+                        <div class="prediction-value" id="playerTailDisplay" style="color: var(--color-success);">-</div>
+                    </div>
+                    <div class="prediction-item">
+                        <div class="prediction-label">莊家尾數</div>
+                        <div class="prediction-value" id="bankerTailDisplay" style="color: var(--color-error);">-</div>
+                    </div>
+                </div>
+                <div style="background: #fff9f0; padding: var(--space-12); border-radius: var(--radius-base); margin-bottom: var(--space-12);">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">尾數相加</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #ff6b35;" id="tailSumDisplay">-</div>
+                </div>
+                <div style="background: #f5f5f5; padding: var(--space-12); border-radius: var(--radius-base); margin-bottom: var(--space-12);">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">初步預測</div>
+                    <div style="font-size: 16px; font-weight: 600;" id="initialPredictionDisplay">-</div>
+                </div>
+                <div style="background: #f0f8ff; padding: var(--space-12); border-radius: var(--radius-base); margin-bottom: var(--space-12);">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">調整信息</div>
+                    <div style="font-size: 13px; color: #2180a6;" id="adjustmentInfoDisplay">-</div>
+                </div>
+                <div style="border-top: 2px solid #ff6b35; padding-top: var(--space-12); text-align: center;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">最終預測</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #ff6b35;" id="finalRoadmapPredictionText">-</div>
+                </div>
+            </div>
+
+            <div id="feedbackSection" class="hidden" style="margin-top: var(--space-24);">
+                <div class="result-section" style="border-left: 4px solid var(--color-warning);">
+                    <div class="section-title">牌局結果</div>
+                    <div style="display: flex; gap: var(--space-16); margin-bottom: var(--space-20);">
+                        <button id="resultPlayer" class="btn-result btn-result-active" onclick="recordResult('player')" style="flex: 1;">開閒</button>
+                        <button id="resultBanker" class="btn-result" onclick="recordResult('banker')" style="flex: 1;">開莊</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-section" id="historySection" style="margin-top: var(--space-24);">
+            <div class="section-title">牌局紀錄 <span id="gameCount" style="color: var(--color-primary);">(0)</span></div>
+            <div id="historyList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-base); padding: var(--space-16);">
+                <div style="text-align: center; color: #999; padding: var(--space-20);">還無紀錄</div>
+            </div>
+            <div style="display: flex; gap: var(--space-16); margin-top: var(--space-16);">
+                <div style="flex: 1;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">準確度</div>
+                    <div style="font-size: 24px; font-weight: 600; color: var(--color-success);" id="accuracyDisplay">-</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">準確局數</div>
+                    <div style="font-size: 24px; font-weight: 600; color: var(--color-success);" id="correctCount">-</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">失敗局數</div>
+                    <div style="font-size: 24px; font-weight: 600; color: var(--color-error);" id="failCount">-</div>
+                </div>
+            </div>
+            <button class="btn-reset" onclick="clearAllData()" style="width: 100%; margin-top: var(--space-16);">🗑️ 清除所有紀錄</button>
+        </div>
+    </div>
+
+    <script>
+        let gameHistory = [];
+        let currentRecommendation = '';
+        let currentPatternKey = '';
+        let patternDatabase = {};
+
+        window.addEventListener('load', function() {
+            loadPatternDatabase();
+            updateHistoryDisplay();
+            updateDatabaseInfo();
+        });
+
+        function generatePatternKey() {
+            const p1 = document.getElementById('player1').value || '-';
+            const p2 = document.getElementById('player2').value || '-';
+            const p3 = document.getElementById('player3').value || '-';
+            const b1 = document.getElementById('banker1').value || '-';
+            const b2 = document.getElementById('banker2').value || '-';
+            const b3 = document.getElementById('banker3').value || '-';
+            return `P:${p1}-${p2}-${p3}|B:${b1}-${b2}-${b3}`;
+        }
+
+        function loadPatternDatabase() {
+            const data = localStorage.getItem('baccaratPatterns');
+            if (data) {
+                patternDatabase = JSON.parse(data);
+            }
+        }
+
+        function savePatternDatabase() {
+            localStorage.setItem('baccaratPatterns', JSON.stringify(patternDatabase));
+            updateDatabaseInfo();
+        }
+
+        function updateDatabaseInfo() {
+            let totalPatterns = Object.keys(patternDatabase).length;
+            let totalRecords = 0;
+            let correctRecords = 0;
+            Object.values(patternDatabase).forEach(records => {
+                totalRecords += records.length;
+                correctRecords += records.filter(r => r.correct).length;
+            });
+            document.getElementById('totalPatterns').textContent = totalPatterns;
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('totalWinRate').textContent = totalRecords > 0 ? 
+                ((correctRecords / totalRecords) * 100).toFixed(1) + '%' : '-';
+        }
+
+        function showPatternHistory(patternKey) {
+            const section = document.getElementById('patternHistorySection');
+            const records = patternDatabase[patternKey] || [];
+            
+            if (records.length === 0) {
+                section.innerHTML = '<div style="text-align: center; color: #999;">此牌局無歷史紀錄</div>';
+            } else {
+                const playerWins = records.filter(r => r.result === '開閒').length;
+                const bankerWins = records.length - playerWins;
+                const correctRate = records.filter(r => r.correct).length / records.length * 100;
+                
+                section.innerHTML = `
+                    <div class="pattern-key">${patternKey}</div>
+                    <div class="pattern-stats">
+                        <div class="pattern-stat">
+                            <div class="pattern-stat-number">${records.length}次</div>
+                            <div style="font-size: 12px; color: #666;">歷史出現</div>
+                        </div>
+                        <div class="pattern-stat">
+                            <div class="pattern-stat-number">${playerWins}次 (${Math.round(playerWins/records.length*100)}%)</div>
+                            <div style="font-size: 12px; color: var(--color-success);">開閒</div>
+                        </div>
+                        <div class="pattern-stat">
+                            <div class="pattern-stat-number">${bankerWins}次 (${Math.round(bankerWins/records.length*100)}%)</div>
+                            <div style="font-size: 12px; color: var(--color-error);">開莊</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--space-16); padding: var(--space-12); background: rgba(255,255,255,0.8); border-radius: var(--radius-base);">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--color-primary);">準確率: ${Math.round(correctRate)}%</div>
+                    </div>
+                `;
+            }
+            section.classList.remove('hidden');
+        }
+
+        function calculateBaccarat() {
+            const player1Val = document.getElementById('player1').value;
+            const player2Val = document.getElementById('player2').value;
+            const player3Val = document.getElementById('player3').value;
+            const banker1Val = document.getElementById('banker1').value;
+            const banker2Val = document.getElementById('banker2').value;
+            const banker3Val = document.getElementById('banker3').value;
+
+            if (!player1Val || !player2Val || !banker1Val || !banker2Val) {
+                alert('請至少輸入閒家和莊家的前兩張牌');
+                return;
+            }
+
+            const player1 = parseInt(player1Val) || 0;
+            const player2 = parseInt(player2Val) || 0;
+            const player3 = player3Val ? (parseInt(player3Val) || 0) : 0;
+            const banker1 = parseInt(banker1Val) || 0;
+            const banker2 = parseInt(banker2Val) || 0;
+            const banker3 = banker3Val ? (parseInt(banker3Val) || 0) : 0;
+
+            const playerTotal = player1 + player2 + player3;
+            const bankerTotal = banker1 + banker2 + banker3;
+
+            const selectedCards = [
+                player1Val ? parseInt(player1Val) : null,
+                player2Val ? parseInt(player2Val) : null,
+                player3Val ? parseInt(player3Val) : null,
+                banker1Val ? parseInt(banker1Val) : null,
+                banker2Val ? parseInt(banker2Val) : null,
+                banker3Val ? parseInt(banker3Val) : null
+            ];
+            const publicCardCount = selectedCards.filter(card => card === 0).length;
+
+            const baseDiff = playerTotal - bankerTotal;
+            const baseDiffSign = baseDiff >= 0 ? 1 : -1;
+            const publicCardSign = publicCardCount % 2 === 0 ? 1 : -1;
+            const finalSign = baseDiffSign * publicCardSign;
+            const absDiff = Math.abs(baseDiff);
+            const finalResult = absDiff * finalSign;
+
+            const isPlayer = finalResult > 0;
+            const recommendation = isPlayer ? '投注閒家' : '投注莊家';
+            const recommendationClass = isPlayer ? 'player' : 'banker';
+
+            currentPatternKey = generatePatternKey();
+            showPatternHistory(currentPatternKey);
+
+            document.getElementById('playerPoints').textContent = playerTotal;
+            document.getElementById('bankerPoints').textContent = bankerTotal;
+            document.getElementById('publicCards').textContent = publicCardCount + ' 張';
+            document.getElementById('publicType').textContent = publicCardCount % 2 === 0 ? '偶數（正）' : '單數（負）';
+            document.getElementById('baseDiff').textContent = baseDiff > 0 ? '+' + baseDiff : baseDiff;
+            
+            const finalResultElement = document.getElementById('finalResult');
+            finalResultElement.textContent = finalResult > 0 ? '+' + finalResult : finalResult;
+            finalResultElement.className = 'result-value ' + (finalResult > 0 ? 'positive' : 'negative');
+
+            const recommendationDiv = document.getElementById('recommendation');
+            recommendationDiv.className = 'recommendation ' + recommendationClass;
+            document.getElementById('recommendationText').textContent = recommendation;
+
+            currentRecommendation = recommendation;
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('feedbackSection').classList.remove('hidden');
+
+            document.getElementById('resultPlayer').classList.remove('btn-result-active');
+            document.getElementById('resultBanker').classList.remove('btn-result-active');
+            document.getElementById('resultPlayer').classList.add('btn-result-active');
+
+            calculateRoadmapPrediction(player1, player2, player3, banker1, banker2, banker3);
+        }
+
+        function calculateRoadmapPrediction(p1, p2, p3, b1, b2, b3) {
+            // 計算尾數 (A=1, 2-9原值, 10/JQK=0)
+            const getTailNumber = (num) => {
+                if (num === 0) return 0;
+                return num % 10;
+            };
+
+            const playerTail = (getTailNumber(p1) + getTailNumber(p2) + getTailNumber(p3)) % 10;
+            const bankerTail = (getTailNumber(b1) + getTailNumber(b2) + getTailNumber(b3)) % 10;
+            const tailSum = playerTail + bankerTail;
+
+            // 初步預測
+            let initialPrediction = '';
+            let initialColor = '';
+            if (tailSum >= 1 && tailSum <= 9) {
+                initialPrediction = '下一局開閒';
+                initialColor = 'var(--color-success)';
+            } else if (tailSum >= 10 && tailSum <= 18) {
+                initialPrediction = '下一局開莊';
+                initialColor = 'var(--color-error)';
+            }
+
+            // 根據張數和高牌調整
+            const cards = [p1, p2, p3, b1, b2, b3].filter(c => c !== null && c !== '' && c !== 0 || c === 0);
+            const allCards = [p1, p2, p3, b1, b2, b3].filter(c => c !== null && c !== '');
+            const totalCards = allCards.length;
+            const hasHighCard = allCards.some(c => c === 0);
+
+            let finalPrediction = initialPrediction;
+            let adjustmentInfo = '';
+
+            if (totalCards >= 5 && totalCards <= 6) {
+                finalPrediction = initialPrediction === '下一局開閒' ? '下一局開莊' : '下一局開閒';
+                adjustmentInfo = `${totalCards}張 → 反轉預測`;
+            } else if (totalCards === 4) {
+                if (!hasHighCard) {
+                    finalPrediction = initialPrediction === '下一局開閒' ? '下一局開莊' : '下一局開閒';
+                    adjustmentInfo = '4張無高牌 → 反轉';
+                } else {
+                    adjustmentInfo = '4張有高牌 → 不變';
+                }
+            } else {
+                adjustmentInfo = `${totalCards}張 → 不調整`;
+            }
+
+            document.getElementById('playerTailDisplay').textContent = playerTail;
+            document.getElementById('bankerTailDisplay').textContent = bankerTail;
+            document.getElementById('tailSumDisplay').textContent = `${playerTail} + ${bankerTail} = ${tailSum}`;
+            
+            const initialPredDiv = document.getElementById('initialPredictionDisplay');
+            initialPredDiv.textContent = initialPrediction;
+            initialPredDiv.style.color = initialColor;
+
+            document.getElementById('adjustmentInfoDisplay').textContent = adjustmentInfo;
+
+            const finalPredDiv = document.getElementById('finalRoadmapPredictionText');
+            finalPredDiv.textContent = finalPrediction;
+            finalPredDiv.style.color = finalPrediction === '下一局開閒' ? 'var(--color-success)' : 'var(--color-error)';
+        }
+
+        function recordResult(result) {
+            if (!currentRecommendation || !currentPatternKey) {
+                alert('請先計算結果');
+                return;
+            }
+
+            const isCorrect = (result === 'player' && currentRecommendation === '投注閒家') ||
+                            (result === 'banker' && currentRecommendation === '投注莊家');
+
+            gameHistory.push({
+                game: gameHistory.length + 1,
+                recommendation: currentRecommendation,
+                result: result === 'player' ? '開閒' : '開莊',
+                correct: isCorrect,
+                timestamp: Date.now()
+            });
+
+            if (!patternDatabase[currentPatternKey]) {
+                patternDatabase[currentPatternKey] = [];
+            }
+            patternDatabase[currentPatternKey].push({
+                recommend: currentRecommendation,
+                result: result === 'player' ? '開閒' : '開莊',
+                correct: isCorrect,
+                timestamp: Date.now()
+            });
+            savePatternDatabase();
+
+            updateHistoryDisplay();
+            updateStatistics();
+
+            resetForm();
+            document.getElementById('feedbackSection').classList.add('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('patternHistorySection').classList.add('hidden');
+        }
+
+        function resetForm() {
+            document.getElementById('player1').value = '';
+            document.getElementById('player2').value = '';
+            document.getElementById('player3').value = '';
+            document.getElementById('banker1').value = '';
+            document.getElementById('banker2').value = '';
+            document.getElementById('banker3').value = '';
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            const gameCount = document.getElementById('gameCount');
+
+            if (gameHistory.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; color: #999; padding: var(--space-20);">還無紀錄</div>';
+                gameCount.textContent = '(0)';
+                return;
+            }
+
+            gameCount.textContent = '(' + gameHistory.length + ')';
+            historyList.innerHTML = gameHistory.slice().reverse().map((game) => `
+                <div class="history-item">
+                    <div class="history-item-info">
+                        <div class="history-item-game">第 ${game.game} 局</div>
+                        <div class="history-item-recommendation">建議: ${game.recommendation}</div>
+                        <div class="history-item-result">結果: ${game.result}</div>
+                    </div>
+                    <div class="history-item-status">
+                        <div class="status-badge ${game.correct ? 'correct' : 'fail'}">
+                            ${game.correct ? '✓ 準' : '✗ 失敗'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStatistics() {
+            const total = gameHistory.length;
+            const correct = gameHistory.filter(g => g.correct).length;
+            const fail = total - correct;
+            const accuracy = total > 0 ? ((correct / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('accuracyDisplay').textContent = accuracy + '%';
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('failCount').textContent = fail;
+        }
+
+        function exportToExcel() {
+            if (gameHistory.length === 0) {
+                alert('暫無數據可匯出');
+                return;
+            }
+
+            let csv = '局數,投注建議,實際結果,是否正確,時間\n';
+            gameHistory.forEach((game) => {
+                const timeStr = game.timestamp ? new Date(game.timestamp).toLocaleString('zh-TW') : '-';
+                csv += `${game.game},${game.recommendation},${game.result},${game.correct ? '正確' : '失敗'},${timeStr}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `baccarat_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        function showAnalytics() {
+            const total = gameHistory.length;
+            if (total === 0) {
+                alert('暫無數據可分析');
+                return;
+            }
+
+            const correct = gameHistory.filter(g => g.correct).length;
+            const playerGames = gameHistory.filter(g => g.recommendation === '投注閒家');
+            const bankerGames = gameHistory.filter(g => g.recommendation === '投注莊家');
+
+            let report = `📊 分析報表\n總局數: ${total}\n整體勝率: ${((correct/total)*100).toFixed(1)}%\n\n`;
+            report += `閒家: ${playerGames.length}局 (${playerGames.length > 0 ? ((playerGames.filter(g=>g.correct).length/playerGames.length)*100).toFixed(1) : 0}%)\n`;
+            report += `莊家: ${bankerGames.length}局 (${bankerGames.length > 0 ? ((bankerGames.filter(g=>g.correct).length/bankerGames.length)*100).toFixed(1) : 0}%)`;
+
+            alert(report);
+        }
+
+        function importDataBatch() {
+            const input = prompt('貼入數據 (格式: 投注閒家,開閒 每行一筆)');
+            if (!input) return;
+
+            const lines = input.trim().split('\n');
+            let count = 0;
+
+            lines.forEach(line => {
+                const [recommend, result] = line.split(',').map(s => s.trim());
+                if (recommend && result) {
+                    const isCorrect = (recommend === '投注閒家' && result === '開閒') ||
+                                     (recommend === '投注莊家' && result === '開莊');
+                    gameHistory.push({
+                        game: gameHistory.length + 1,
+                        recommendation: recommend,
+                        result: result,
+                        correct: isCorrect,
+                        timestamp: Date.now()
+                    });
+                    count++;
+                }
+            });
+
+            if (count > 0) {
+                updateHistoryDisplay();
+                updateStatistics();
+                alert(`成功導入 ${count} 筆`);
+            }
+        }
+
+        function showTopPatterns() {
+            const sorted = Object.entries(patternDatabase)
+                .sort(([,a], [,b]) => b.length - a.length)
+                .slice(0, 10);
+            
+            let html = 'Top 10 牌局\n\n';
+            sorted.forEach(([key, records]) => {
+                const playerWins = records.filter(r => r.result === '開閒').length;
+                html += `${key}: ${records.length}次 (${Math.round(playerWins/records.length*100)}%開閒)\n`;
+            });
+
+            alert(html);
+        }
+
+        function clearAllData() {
+            if (confirm('確定清除所有紀錄？')) {
+                if (confirm('再次確認')) {
+                    gameHistory = [];
+                    patternDatabase = {};
+                    localStorage.clear();
+                    updateHistoryDisplay();
+                    updateStatistics();
+                    updateDatabaseInfo();
+                }
+            }
+        }
+
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                calculateBaccarat();
+            }
+        });
+    </script>
+</body>
+</html>
